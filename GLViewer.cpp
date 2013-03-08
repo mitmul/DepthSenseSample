@@ -10,12 +10,13 @@ GLViewer::GLViewer()
 	zRot(0),
 	xOrigin(0.0),
 	yOrigin(0.0),
-	zOrigin(-1.5),
+	zOrigin(0.0),
 	last_x(0),
 	last_y(0),
 	mouse_button(0),
 	mouse_click(1),
-	scale(1.0)
+	scale(1.0),
+	show_axis(true)
 {
 	image.create(640, 480, CV_8UC3);
 	image = Mat::zeros(image.size(), image.type());
@@ -81,6 +82,8 @@ void GLViewer::setImage(const Mat &_image)
 void GLViewer::setPoints(const vector<Point3d> &_points)
 {
 	points = _points;
+
+	// データが到着したらFPSを更新
 	calcFPS();
 }
 
@@ -93,18 +96,24 @@ void GLViewer::display()
 {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+	glTranslated(0.0, 0.0, -1.5);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	drawFPS();
 
 	glPushMatrix();
+
 	glTranslatef(xOrigin, yOrigin, zOrigin);
 	glRotatef(M_PI, 0.0, 1.0, 0.0);
 	glRotatef(xRot / 16.0, 1.0, 0.0, 0.0);
 	glRotatef(yRot / 16.0, 0.0, 1.0, 0.0);
 	glRotatef(zRot / 16.0, 0.0, 0.0, 1.0);
 	drawPoints();
+
+	if(show_axis)
+		drawAxis();
+
 	glPopMatrix();
 
 	glutSwapBuffers();
@@ -115,7 +124,9 @@ void GLViewer::resize(int w, int h)
 	glViewport(0, 0, w, h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(58.0, 74.0 / 58.0, 0.001, 1000.0);
+
+	// 視野角などはDepthSense325仕様より
+	gluPerspective(58.0, (double)w / (double)h, 0.001, 1000.0); // 74.0 / 58.0
 }
 
 void GLViewer::idle()
@@ -135,7 +146,6 @@ void GLViewer::mouse(int button, int state, int x, int y)
 void GLViewer::wheel(int button, int dir, int x, int y)
 {
 	zOrigin += (double)dir / 10.0;
-	cout << zOrigin << endl;
 }
 
 void GLViewer::motion(int x, int y)
@@ -160,11 +170,9 @@ void GLViewer::keyboard(unsigned char key, int x, int y)
 {
 	switch(key)
 	{
-	case 's':
-		zOrigin -= 0.1;
-		break;
-	case 'b':
-		zOrigin += 0.1;
+		// 座標系軸表示の切り替え
+	case 'a':
+		show_axis = !show_axis;
 		break;
 	}
 }
@@ -173,15 +181,19 @@ void GLViewer::special(int key, int x, int y)
 {
 	switch(key)
 	{
+		// Left Arrow Key
 	case 100:
 		xOrigin -= 0.1;
 		break;
+		// Up Arrow Key
 	case 101:
 		yOrigin += 0.1;
 		break;
+		// Right Arrow Key
 	case 102:
 		xOrigin += 0.1;
 		break;
+		// Down Arrow Key
 	case 103:
 		yOrigin -= 0.1;
 		break;
@@ -247,9 +259,9 @@ void GLViewer::calcFPS()
 
 void GLViewer::drawFPS()
 {
-	glColor3d(1, 1, 1);
+	glColor3d(1.0, 1.0, 1.0);
 	stringstream ss; ss << fps << " fps";
-	drawText(ss.str(), -1, -1);
+	drawText(ss.str(), -1.0, -0.8);
 }
 
 void GLViewer::drawText(const string &_text, const double x, const double y)
@@ -302,8 +314,42 @@ void GLViewer::drawPoints()
 				glColor3d((double)c[2] / 255.0, (double)c[1] / 255.0, (double)c[0] / 255.0);
 			}
 			Point3d p = points[i];
+
+			// DepthSense325は150mm～1000mmまで計測可能なので
 			glVertex3d(p.x / 1000.0, p.y / 1000.0, p.z / 1000.0);
 		}
 		glEnd();
 	}
+}
+
+void GLViewer::drawAxis()
+{
+	double length = 0.2;
+
+	//X軸
+	glColor3f(1.0, 0.0, 0.0);
+	glBegin(GL_LINES);
+	glVertex3f(-length, 0.0, 0.0);
+	glVertex3f(length, 0.0, 0.0);
+	glVertex3f(length * 0.9, length * 0.1, 0.0);
+	glVertex3f(length * 0.9, -length * 0.1, 0.0);
+	glEnd();
+
+	//Y軸
+	glColor3f(0.0, 1.0, 0.0);
+	glBegin(GL_LINES);
+	glVertex3f(0.0, -length, 0.0);
+	glVertex3f(0.0, length, 0.0);
+	glVertex3f(-length * 0.1, length * 0.9, 0.0);
+	glVertex3f(length * 0.1, length * 0.9, 0.0);
+	glEnd();
+
+	//Z軸
+	glColor3f(0.0, 0.0, 1.0);
+	glBegin(GL_LINES);
+	glVertex3f(0.0, 0.0, -length);
+	glVertex3f(0.0, 0.0, length);
+	glVertex3f(0.0, -length * 0.1, length * 0.9);
+	glVertex3f(0.0, length * 0.1, length * 0.9);
+	glEnd();
 }

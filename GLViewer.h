@@ -46,6 +46,7 @@ private:
 	void drawText(const string &_text, const double x, const double y);
 	void drawImage();
 	void drawPoints();
+	void drawAxis();
 
 	GLuint texture;
 	Mat image;
@@ -64,6 +65,8 @@ private:
 
 	vector<Point3d> points;
 	vector<Vec3b> colors;
+
+	bool show_axis;
 };
 
 #endif // GLVIEWER_H
