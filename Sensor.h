@@ -43,5 +43,6 @@ private:
 
 	GLViewer *viewer;
 	Mat color_img;
+	Mat depth_img;
 };
 

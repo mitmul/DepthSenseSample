@@ -23,7 +23,7 @@ public:
 	void init(int argc, char* argv[]);
 	void setImage(const Mat &_image);
 	void setPoints(const vector<Point3d> &_points);
-	void setColors(const vector<Vec4b> &_colors);
+	void setColors(const vector<Vec3b> &_colors);
 	void start();
 
 private:
@@ -57,12 +57,13 @@ private:
 
 	int xRot, yRot, zRot;
 	float xOrigin, yOrigin, zOrigin;
+	float scale;
 	int last_x, last_y;
 	int mouse_button;
 	int mouse_click;
 
 	vector<Point3d> points;
-	vector<Vec4b> colors;
+	vector<Vec3b> colors;
 };
 
 #endif // GLVIEWER_H

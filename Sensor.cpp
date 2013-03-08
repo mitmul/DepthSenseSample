@@ -6,6 +6,7 @@ Sensor::Sensor(void)
 	proj_helper(NULL)
 {
 	color_img.create(480, 640, CV_8UC3);
+	depth_img.create(480, 640, CV_8UC1);
 }
 
 Sensor::~Sensor(void)
@@ -51,10 +52,15 @@ void Sensor::onNewAudioSample(AudioNode node, AudioNode::NewSampleReceivedData d
 void Sensor::onNewColorSample(ColorNode node, ColorNode::NewSampleReceivedData data)
 {
 	color_img.data = (uchar *)(const uint8_t *)data.colorMap;
+
+	// カラー画像を表示
+	imshow("Color Image", color_img);
+	waitKey(1);
 }
 
 void Sensor::onNewDepthSample(DepthNode node, DepthNode::NewSampleReceivedData data)
 {
+	// デプスデータの射影パラメータ
 	if(!proj_helper)
 	{
 		proj_helper = new ProjectionHelper(data.stereoCameraParameters);
@@ -66,9 +72,15 @@ void Sensor::onNewDepthSample(DepthNode node, DepthNode::NewSampleReceivedData d
 		stereo_param = data.stereoCameraParameters;
 	}
 
-	Mat img = color_img.clone();
+	// デプス画像を表示
+	Mat depth(240, 320, CV_16SC1, (void *)(const int16_t *)data.depthMap);
+	depth.convertTo(depth_img, CV_8U, 255.0 / 1000.0);
+	cv::resize(depth_img, depth_img, Size(640, 480));
+	imshow("Depth Image", depth_img);
+	waitKey(1);
+
 	vector<Point3d> points;
-	vector<Vec4b> colors;
+	vector<Vec3b> colors;
 	for(int y = 0; y < 240; ++y)
 	{
 		for(int x = 0; x < 320; ++x)
@@ -76,19 +88,22 @@ void Sensor::onNewDepthSample(DepthNode node, DepthNode::NewSampleReceivedData d
 			Vertex p = data.vertices[y * 320 + x];
 			points.push_back(Point3d(p.x, p.y, p.z));
 
-			if(!img.empty())
+			if(!color_img.empty())
 			{
+				// カラー画像座標系に射影
 				Point2D pos;
 				proj_helper->get2DCoordinates(&p, &pos, 1, CAMERA_PLANE_COLOR);
 				int x_pos = (int)pos.x;
 				int y_pos = (int)pos.y;
-				int img_pos = y_pos * 640 * 3 + x_pos * 3;
-				if(img_pos >= 0 && img_pos < 640 * 480 * 3)
+
+				// その位置の色画素値を記録
+				if(x_pos >= 0 && x_pos < color_img.cols &&
+					y_pos >= 0 && y_pos < color_img.rows)
 				{
-					colors.push_back(Vec4b(img.data[img_pos + 0], img.data[img_pos + 1], img.data[img_pos + 2], 1));
+					colors.push_back(color_img.at<Vec3b>(y_pos, x_pos));
 				}
 				else
-					colors.push_back(Vec4b(0, 0, 0, 0));
+					colors.push_back(Vec3b(0, 0, 0));
 			}
 		}
 	}
@@ -132,9 +147,10 @@ void Sensor::configureDepthNode()
 	config.frameFormat = FRAME_FORMAT_QVGA;
 	config.framerate = 25;
 	config.mode = DepthNode::CAMERA_MODE_CLOSE_MODE;
-	config.saturation = false;
+	config.saturation = true;
 
 	d_node.setEnableVertices(true);
+	d_node.setEnableDepthMap(true);
 
 	try
 	{

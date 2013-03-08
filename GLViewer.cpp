@@ -10,11 +10,12 @@ GLViewer::GLViewer()
 	zRot(0),
 	xOrigin(0.0),
 	yOrigin(0.0),
-	zOrigin(-3.0),
+	zOrigin(-1.5),
 	last_x(0),
 	last_y(0),
 	mouse_button(0),
-	mouse_click(1)
+	mouse_click(1),
+	scale(1.0)
 {
 	image.create(640, 480, CV_8UC3);
 	image = Mat::zeros(image.size(), image.type());
@@ -83,7 +84,7 @@ void GLViewer::setPoints(const vector<Point3d> &_points)
 	calcFPS();
 }
 
-void GLViewer::setColors(const vector<Vec4b> &_colors)
+void GLViewer::setColors(const vector<Vec3b> &_colors)
 {
 	colors = _colors;
 }
@@ -114,7 +115,7 @@ void GLViewer::resize(int w, int h)
 	glViewport(0, 0, w, h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(60, (double)w / (double)h, 0.1, 100.0);
+	gluPerspective(58.0, 74.0 / 58.0, 0.001, 1000.0);
 }
 
 void GLViewer::idle()
@@ -134,6 +135,7 @@ void GLViewer::mouse(int button, int state, int x, int y)
 void GLViewer::wheel(int button, int dir, int x, int y)
 {
 	zOrigin += (double)dir / 10.0;
+	cout << zOrigin << endl;
 }
 
 void GLViewer::motion(int x, int y)
@@ -296,8 +298,8 @@ void GLViewer::drawPoints()
 		{
 			if(color)
 			{
-				Vec4b c = colors[i];
-				glColor3b(c[2], c[1], c[0]);
+				Vec3b c = colors[i];
+				glColor3d((double)c[2] / 255.0, (double)c[1] / 255.0, (double)c[0] / 255.0);
 			}
 			Point3d p = points[i];
 			glVertex3d(p.x / 1000.0, p.y / 1000.0, p.z / 1000.0);
